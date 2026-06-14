@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Premium SaaS Calculator</title>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  
+  <style>
+    :root {
+      --gradient-bg: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+      --accent-purple: #6366f1;
+      --accent-teal: #14b8a6;
+      --glass-bg: rgba(255, 255, 255, 0.03);
+      --glass-border: rgba(255, 255, 255, 0.08);
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--gradient-bg);
+      color: #f8fafc;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      overflow: hidden;
+    }
+
+    .container {
+      background: var(--glass-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--glass-border);
+      padding: 2.5rem;
+      border-radius: 1.5rem;
+      width: 100%;
+      max-width: 420px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(to right, #a5b4fc, #6366f1);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 2rem;
+      background: rgba(239, 68, 68, 0.15);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.2);
+    }
+
+    .status-badge.active {
+      background: rgba(20, 184, 166, 0.15);
+      color: #2dd4bf;
+      border: 1px solid rgba(20, 184, 166, 0.2);
+    }
+
+    .calculator-box {
+      position: relative;
+      background: rgba(0, 0, 0, 0.2);
+      padding: 1.5rem;
+      border-radius: 1rem;
+      border: 1px solid var(--glass-border);
+      transition: all 0.5s ease;
+    }
+
+    .locked {
+      filter: blur(5px);
+      pointer-events: none;
+      opacity: 0.4;
+    }
+
+    input {
+      width: calc(100% - 1.5rem);
+      padding: 0.75rem;
+      margin-bottom: 1rem;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--glass-border);
+      border-radius: 0.5rem;
+      color: #fff;
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.3s;
+    }
+
+    input:focus {
+      border-color: var(--accent-purple);
+    }
+
+    button {
+      width: 100%;
+      padding: 0.8rem;
+      border: none;
+      border-radius: 0.5rem;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .btn-calc {
+      background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+      color: white;
+    }
+
+    .btn-calc:hover {
+      box-shadow: 0 0 15px rgba(99, 102, 241, 0.4);
+    }
+
+    .pay-section {
+      margin-top: 1.5rem;
+    }
+
+    .btn-pay {
+      background: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%);
+      color: white;
+      box-shadow: 0 4px 12px rgba(20, 184, 166, 0.2);
+    }
+
+    .btn-pay:hover {
+      box-shadow: 0 0 20px rgba(20, 184, 166, 0.5);
+    }
+
+    #result {
+      margin-top: 1rem;
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: #2dd4bf;
+    }
+
+    .price-text {
+      font-size: 0.9rem;
+      color: #94a3b8;
+      margin-bottom: 0.75rem;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h1>Smart Calc Pro</h1>
+    <div id="statusBadge" class="status-badge">Locked / Non-Paid</div>
+    
+    <div id="calculator" class="calculator-box locked">
+      <input type="number" id="num1" placeholder="Enter First Number">
+      <input type="number" id="num2" placeholder="Enter Second Number">
+      <button class="btn-calc" onclick="calculate()">Calculate Sum</button>
+      <p id="result">Result: --</p>
+    </div>
+
+    <div id="paySection" class="pay-section">
+      <p class="price-text">Unlock full access for just <strong>Rs. 10 / month</strong></p>
+      <button class="btn-pay" onclick="redirectToCheckout()">Pay Rs. 10 via AsaanPay</button>
+    </div>
+  </div>
+
+  <script>
+    // TODO: Apni Firebase Console se details yahan paste karein
+    const firebaseConfig = {
+      apiKey: "YOUR_FIREBASE_API_KEY",
+      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+      databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
+      projectId: "YOUR_PROJECT_ID"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+    
+    // Test ke liye ek static User ID set kar rahe hain
+    const userId = "user_shany_786";
+
+    // Real-time Database Listener: Yeh bina page refresh kiye status update check karega
+    database.ref('users/' + userId).on('value', (snapshot) => {
+      const data = snapshot.val();
+      
+      const calcBox = document.getElementById('calculator');
+      const statusBadge = document.getElementById('statusBadge');
+      const paySection = document.getElementById('paySection');
+
+      if (data && data.status === 'active') {
+        // Agar status active hai to unlock kar do
+        calcBox.classList.remove('locked');
+        statusBadge.innerText = "Premium Active";
+        statusBadge.classList.add('active');
+        paySection.style.display = 'none'; // Payment button chupa dein
+      } else {
+        // Agar status active nahi hai ya node exist nahi karta
+        calcBox.classList.add('locked');
+        statusBadge.innerText = "Locked / Non-Paid";
+        statusBadge.classList.remove('active');
+        paySection.style.display = 'block';
+      }
+    });
+
+    // Checkout page par le jaane ke liye function
+    function redirectToCheckout() {
+      // User ID ko URL parameter mein bhej rahe hain taake backend ko pata chale kisne pay kiya
+      window.location.href = `checkout.php?user_id=${userId}`;
+    }
+
+    // Calculator Logic
+    function calculate() {
+      const n1 = parseFloat(document.getElementById('num1').value) || 0;
+      const n2 = parseFloat(document.getElementById('num2').value) || 0;
+      const sum = n1 + n2;
+      document.getElementById('result').innerText = "Result: " + sum;
+    }
+  </script>
+
+</body>
+</html>
