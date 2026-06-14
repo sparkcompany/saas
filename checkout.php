@@ -8,8 +8,8 @@ if (!isset($_GET['user_id'])) {
 $userId = $_GET['user_id'];
 
 // TODO: Apni AsaanPay Merchant Credentials yahan dalein
-$merchantId = "YOUR_ASAANPAY_MERCHANT_ID";
-$apiKey = "YOUR_ASAANPAY_API_KEY";
+$merchantId = "e50c5d31-384d-4a27-89f4-738c48dca948";
+$apiKey = "SPAY-ebea-e7e1-004a-8d06";
 $apiEndpoint = "https://api.asaanpay.com/v1/checkout/session"; // Check documentation for exact URL
 
 $orderId = "ORD-" . time() . "-" . $userId;
